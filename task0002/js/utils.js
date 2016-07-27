@@ -287,3 +287,206 @@ $("[data-log]"); // 返回第一个包含属性data-log的对象
 
 // 可以通过简单的组合提高查询便利性，例如
 $("#adom .classa"); // 返回id为adom的DOM所包含的所有子节点中，第一个样式定义包含classa的对象
+
+var EventUtil = {
+	addHandler: function(element, type, handler) {
+		if (element.addEventListener) {
+			//DOM2级
+			element.addEventListener(type, handler, false);//冒泡阶段处理
+		} else if (element.attachEvent) { 
+			//IE
+			element.attachEvent("on" + type, handler);
+		} else {
+			//DOM0级
+			element["on" + type] = handler;
+		}
+	},
+	getEvent: function(event) {
+		return event ? event : window.event;
+	},
+	getTarget: function(event) {
+		return event.target || event.srcElement;
+	},
+	preventDefault: function(event) {
+		if (event.preventDefault) {
+			event.preventDefault();
+		} else {
+			event.returnValue = false;
+		}
+	},
+	removeHandler: function(element, type, handler) {
+		if (element.removeEventListener) {
+			//DOM2级
+			element.removeEventListener(type, handler, false);
+		} else if (element.detachEvent) {
+			// IE
+			element.detachEvent("on" + type, handler);
+		} else {
+			// DOM0
+			element["on" + type] = null;
+		}
+	},
+	stopPropagation: function(event) {
+		if (event.stopPropagation) {
+			event.stopPropagation();
+		} else {
+			event.cancleBubble = true;
+		}
+	},
+	getCharCode: function(event) {
+		if (typeof event.charCode == "number") {
+			return event.charCode;
+		} else {
+			return event.keyCode;
+		}
+	}
+};
+
+// 实现对click事件的绑定
+function addClickEvent(element, listener) {
+	EventUtil.addHandler(element, 'click',listener);
+}
+
+// 实现对于按Enter键时的事件绑定
+function addEnterEvent(element, listener) {
+	EventUtil.addHandler(element, 'keydown', function(e){
+		var event = e || window.event;
+		var charCode = event.charCode || event.keyCode;
+		if (charCode === 13) {
+			listener.call(element, event);
+		}
+	});
+}
+// 事件委托
+function delegateEvent(element, tag, eventName, listener) {
+    EventUtil.addHandler(element, eventName, function (e) {
+        var event = EventUtil.getEvent(e);
+        var target = EventUtil.getTarget(event);
+
+        if (target && target.tagName === tag.toUpperCase()) {
+            listener.call(target, event);
+        }
+    });
+
+}
+// delegateEvent('#list', "li", "click", liClicker);
+// 判断是否为IE浏览器，返回-1或者版本号
+function isIE() {
+    // your implement
+}
+
+var CookieUtil = {
+	get: function (name) {
+		var cookieName = encodeURIComponent(name) + '=',
+			cookieStart = document.cookie.indexOf(cookieName);
+			cookieValue = null;
+
+		if (cookieStart > -1) {
+			var cookieEnd = document.cookie.indexOf(';', cookieStart);
+			if (cookieEnd == -1) {
+				cookieEnd = document.cookie.length;
+			};
+			cookieValue = decodeURIComponent(document.cookie.slice(cookieStart
+						+ cookieName.length, cookieEnd));
+		};	
+
+		return cookieValue;
+	},
+
+	set: function (name, value, expires, path, domain, secure) {
+		var cookieText = encodeURIComponent(name) + '=' 
+						+ encodeURIComponent(value); 
+
+        if (expires instanceof Date) {
+        	cookieText += '; expires=' + expires.toGMTString();
+        };							
+        if (path) {
+        	cookieText += '; path=' + path;
+        };
+        if (domain) {
+        	cookieText += '; domain=' + domain;
+        };
+        if (secure) {
+        	cookieText += '; secure'
+        };
+	},
+
+	unset: function (name, path, domain, secure) {
+		this.set(name, '', new Date(0), path, domain, secure);
+	}
+};
+
+var RequestUtil = {
+	
+	//创建请求对象 
+	createXHR: function(){
+		if (typeof XMLHttpRequest != "undefined") {
+			return new XMLHttpRequest();
+		} else if (typeof ActiveXObject != "undefined") {
+			return new ActiveXObject("Microsoft.XMLHTTP");
+		} else {
+			throw new Error("No XHR object available.")
+		}
+	},
+	/**
+	 * 添加URL请求参数
+	 * @param {[String]} url   [地址]
+	 * @param {[String]} name  [键]
+	 * @param {[String]} value [值]
+	 */
+	addURLParams: function(url, name, value){
+		url += (url.indexOf('?') == -1 ? "?" : "&");
+		url += encodeURIComponent(name) + '=' + encodeURIComponent(value);
+		return url;
+	},
+	/**
+	 * ajax
+	 * @param  {[String]} url    [地址]
+	 * @param  {[Object]} option [可选项，包含data,type,onsuccess,onfail]
+	 * @return {[type]}        [无]
+	 */
+	ajax: function(url, option) {
+		var data = '',
+			type = option.type ? option.type.toUpperCase() : 'GET',
+		 	xhr = this.createXHR();
+
+		// 处理data
+		if (option.data) {
+			var dataArr = [];
+			for (var item in option.data) {
+				dataArr.push(item + '=' + encodeURIComponent(option.data[item]));
+			}
+			data = dataArr.join('&');
+		};
+
+		if (type === 'GET') {
+			 if (data.length > 0) {
+			 	url += '?' + data;
+			 };
+			 xhr.open('GET', url, true);
+			 xhr.send(null);
+		} else if (type === 'POST') {
+			xhr.open('POST', url, true);
+			xhr.setRequestHeader("Content-Type","application/x-www-form-urlencodeed");
+			xhr.send(data);
+		} else {
+			throw new Error("HTTP request Type error.");
+		}
+		// 处理回调
+		xhr.onreadystatechange = function(){
+			if (xhr.readyState === 4) {
+				if ((xhr.status >= 200 && xhr.status < 300) || xhr.status === 304) {
+					if (options.onsuccess) {
+					    options.onsuccess(xhr.responseText, xhr.responseXML);
+					}
+				} else {
+					if (options.onfail) {
+						options.onfail();
+					}
+				}
+			};
+		}
+
+
+	}
+};
