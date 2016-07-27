@@ -5,3 +5,7 @@
 .display-area {
   margin:20px 0;
 }
+.error {
+	color: red;
+	text-align: right;
+}
