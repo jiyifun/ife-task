@@ -1,0 +1,27 @@
+@import "compass";
+$carouselWidth: 350px;
+$carouselHeight:150px;
+$imageCount:4;
+$interval:10s;
+.container {
+  width: $carouselWidth;
+  height: $carouselHeight;
+  overflow:hidden;
+  
+  .css-carousel {
+    width: $imageCount * 100%;
+    position:relative;
+    @include animation(slide $interval linear infinite);
+    
+    .css-img {
+      float:left;
+    }
+  }
+}
+@include keyframes(slide) {
+  0%, 23% {margin-left:0}
+  25%, 48% {margin-left:-100%}
+  50%, 73% {margin-left:-200%}
+  75%, 98% {margin-left:-300%}
+  100% {margin-left:0}
+}
